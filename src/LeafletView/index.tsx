@@ -11,17 +11,27 @@ import {
   OWN_POSTION_MARKER_ID,
 } from './types';
 import { LatLng } from 'react-leaflet';
-import { NativeSyntheticEvent, Platform, StyleSheet } from 'react-native';
+import { NativeSyntheticEvent, StyleSheet } from 'react-native';
+import { readAsStringAsync } from 'expo-file-system';
+import { useAssets } from 'expo-asset';
 import {
   WebViewError,
   WebViewMessageEvent,
 } from 'react-native-webview/lib/WebViewTypes';
 import LoadingIndicator from '../LoadingIndicator';
 
-const LEAFLET_HTML_SOURCE = Platform.select({
-  ios: require('../../android/src/main/assets/leaflet.html'),
-  android: { uri: 'file:///android_asset/leaflet.html' },
-});
+const LEAFLET_HTML_SOURCE = () => {
+  const [index] = useAssets(
+    require('../../android/src/main/assets/leaflet.html')
+  );
+  const [html, setHtml] = useState('');
+  if (index) {
+    readAsStringAsync(index[0].localUri as string).then((data) => {
+      setHtml(data);
+    });
+  }
+  return html;
+};
 
 const DEFAULT_MAP_LAYERS = [
   {
@@ -54,7 +64,7 @@ export type LeafletViewProps = {
 };
 
 const LeafletView: React.FC<LeafletViewProps> = ({
-  renderLoading = (() => <LoadingIndicator />),
+  renderLoading = () => <LoadingIndicator />,
   onError,
   onLoadEnd,
   onLoadStart,
@@ -68,7 +78,7 @@ const LeafletView: React.FC<LeafletViewProps> = ({
   doDebug = __DEV__,
   androidHardwareAccelerationDisabled,
   webviewStyle,
-  injectedJavaScript
+  injectedJavaScript,
 }) => {
   const webViewRef = useRef<WebView>(null);
   const [initialized, setInitialized] = useState(false);
@@ -217,7 +227,7 @@ const LeafletView: React.FC<LeafletViewProps> = ({
       onError={onError}
       originWhitelist={['*']}
       renderLoading={renderLoading}
-      source={LEAFLET_HTML_SOURCE}
+      source={{ html: LEAFLET_HTML_SOURCE() }}
       allowFileAccess={true}
       allowUniversalAccessFromFileURLs={true}
       allowFileAccessFromFileURLs={true}
